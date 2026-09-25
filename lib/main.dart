@@ -95,27 +95,5 @@ class ThorfinHome extends StatelessWidget {
                   color: Colors.white,
                 ),
                 child: const Icon(
-                  Icons.mic_rounded,
-                  size: 38,
-                  color: Colors.black,
-                ),
-              ),
-            ),
 
-            const SizedBox(height: 18),
-
-            const Text(
-              'Tap to speak',
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 14,
-              ),
-            ),
-
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
-    );
-  }
-}
+                  
