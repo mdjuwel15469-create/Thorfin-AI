@@ -12,6 +12,50 @@ workflows:
         script: |
           flutter create --platforms=android .
 
+      - name: Configure Android permissions
+        script: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          manifest = Path("android/app/src/main/AndroidManifest.xml")
+          text = manifest.read_text()
+
+          permissions = """    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+              <uses-permission android:name="android.permission.INTERNET"/>
+              <uses-permission android:name="android.permission.BLUETOOTH"/>
+              <uses-permission android:name="android.permission.BLUETOOTH_ADMIN"/>
+              <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"/>
+          """
+
+          if "android.permission.RECORD_AUDIO" not in text:
+              text = text.replace(
+                  "    <application",
+                  permissions + "\n    <application",
+                  1
+              )
+
+          queries = """    <queries>
+                  <intent>
+                      <action android:name="android.speech.RecognitionService"/>
+                  </intent>
+              </queries>
+          """
+
+          if "android.speech.RecognitionService" not in text:
+              text = text.replace(
+                  "    <application",
+                  queries + "\n    <application",
+                  1
+              )
+
+          manifest.write_text(text)
+          print("Android voice permissions configured.")
+          PY
+
+      - name: Set up Flutter local properties
+        script: |
+          echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
+
       - name: Get Flutter packages
         script: |
           flutter pub get
