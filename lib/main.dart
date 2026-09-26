@@ -70,7 +70,7 @@ class _ThorfinHomeState extends State<ThorfinHome> {
 
         setState(() {
           _isListening = false;
-          _status = 'Voice error: ${error.errorMsg}';
+          _status = 'Voice error';
         });
       },
     );
@@ -92,11 +92,10 @@ class _ThorfinHomeState extends State<ThorfinHome> {
       final intent = AndroidIntent(
         action: 'android.intent.action.MAIN',
         package: 'com.google.android.youtube',
-        componentName: 'com.google.android.youtube.HomeActivity',
       );
 
       await intent.launch();
-    } catch (e) {
+    } catch (_) {
       await _speak('YouTube open nahi ho paya');
     }
   }
@@ -106,13 +105,13 @@ class _ThorfinHomeState extends State<ThorfinHome> {
       await _speak('Chrome khol raha hoon');
 
       final intent = AndroidIntent(
-        action: 'android.intent.action.MAIN',
+        action: 'android.intent.action.VIEW',
+        data: 'https://www.google.com',
         package: 'com.android.chrome',
-        componentName: 'com.google.android.apps.chrome.Main',
       );
 
       await intent.launch();
-    } catch (e) {
+    } catch (_) {
       await _speak('Chrome open nahi ho paya');
     }
   }
@@ -126,7 +125,7 @@ class _ThorfinHomeState extends State<ThorfinHome> {
       );
 
       await intent.launch();
-    } catch (e) {
+    } catch (_) {
       await _speak('Camera open nahi ho paya');
     }
   }
@@ -138,10 +137,11 @@ class _ThorfinHomeState extends State<ThorfinHome> {
       final intent = AndroidIntent(
         action: 'android.intent.action.VIEW',
         data: 'geo:0,0',
+        package: 'com.google.android.apps.maps',
       );
 
       await intent.launch();
-    } catch (e) {
+    } catch (_) {
       await _speak('Maps open nahi ho paya');
     }
   }
@@ -155,7 +155,7 @@ class _ThorfinHomeState extends State<ThorfinHome> {
       );
 
       await intent.launch();
-    } catch (e) {
+    } catch (_) {
       await _speak('Settings open nahi ho paya');
     }
   }
@@ -168,28 +168,24 @@ class _ThorfinHomeState extends State<ThorfinHome> {
       return;
     }
 
-    // YouTube
     if (text.contains('youtube') ||
         text.contains('you tube')) {
       await _openYouTube();
       return;
     }
 
-    // Chrome
     if (text.contains('chrome') ||
         text.contains('google chrome')) {
       await _openChrome();
       return;
     }
 
-    // Camera
     if (text.contains('camera') ||
         text.contains('cam')) {
       await _openCamera();
       return;
     }
 
-    // Maps
     if (text.contains('maps') ||
         text.contains('map') ||
         text.contains('google map')) {
@@ -197,14 +193,12 @@ class _ThorfinHomeState extends State<ThorfinHome> {
       return;
     }
 
-    // Settings
     if (text.contains('settings') ||
         text.contains('setting')) {
       await _openSettings();
       return;
     }
 
-    // Stop / Band
     if (text == 'stop' ||
         text.contains('band karo') ||
         text.contains('band kar do') ||
@@ -222,7 +216,6 @@ class _ThorfinHomeState extends State<ThorfinHome> {
       return;
     }
 
-    // Wapas / Back
     if (text.contains('wapas') ||
         text.contains('back') ||
         text.contains('piche') ||
@@ -231,7 +224,6 @@ class _ThorfinHomeState extends State<ThorfinHome> {
       return;
     }
 
-    // Unknown command
     await _speak('Command samajh nahi aayi bhai');
   }
 
@@ -397,9 +389,7 @@ class _ThorfinHomeState extends State<ThorfinHome> {
             const SizedBox(height: 18),
 
             Text(
-              _isListening
-                  ? 'Tap to stop'
-                  : 'Tap to speak',
+              _isListening ? 'Tap to stop' : 'Tap to speak',
               style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 14,
@@ -411,27 +401,5 @@ class _ThorfinHomeState extends State<ThorfinHome> {
         ),
       ),
     );
-  }
-}
-
-Ab kya karna hai:
-
-1. GitHub → "lib/main.dart"
-2. Purana poora code delete
-3. Upar wala code paste
-4. Commit changes
-5. Codemagic → new build
-6. APK install karke mic permission Allow karna
-7. Test:
-   - "YouTube kholo"
-   - "Chrome kholo"
-   - "Camera kholo"
-   - "Maps kholo"
-   - "Settings kholo"
-   - "Band karo"
-
-"android_intent_plus" Android-only plugin hai; current 6.1.0 ko Flutter ≥3.12, Dart ≥3.1, Java 17 aur newer Android Gradle tooling chahiye, so Codemagic ka Flutter stable setup is requirement ko meet karna chahiye.
-
-Ek limitation: abhi “Wapas aao” sirf reply karega; YouTube ke andar rehkar background me “Thorfin” sunna abhi implement nahi hua hai. Pehle ye command-launch version stable karte hain, phir background/always-listening Thorfin alag step me banayenge.
   }
 }
