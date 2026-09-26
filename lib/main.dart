@@ -4,9 +4,7 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:android_intent_plus/android_intent.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 
-void main() {
-  runApp(const ThorfinApp());
-}
+void main() => runApp(const ThorfinApp());
 
 class ThorfinApp extends StatelessWidget {
   const ThorfinApp({super.key});
@@ -41,9 +39,8 @@ class _ThorfinHomeState extends State<ThorfinHome> {
   static const String _apiKey =
       String.fromEnvironment('GEMINI_API_KEY');
 
-  late stt.SpeechToText _speech;
-  late FlutterTts _tts;
-
+  late final stt.SpeechToText _speech;
+  late final FlutterTts _tts;
   GenerativeModel? _model;
   ChatSession? _chat;
 
@@ -58,86 +55,53 @@ class _ThorfinHomeState extends State<ThorfinHome> {
   @override
   void initState() {
     super.initState();
-
     _speech = stt.SpeechToText();
     _tts = FlutterTts();
-
     _setup();
   }
 
   Future<void> _setup() async {
-    await _setupTts();
-    await _setupSpeech();
-    _setupGemini();
-
-    if (mounted) {
-      setState(() {});
-    }
-  }
-
-  // =========================
-  // TEXT TO SPEECH
-  // =========================
-
-  Future<void> _setupTts() async {
     await _tts.setLanguage('en-US');
     await _tts.setSpeechRate(0.9);
     await _tts.setVolume(1.0);
     await _tts.setPitch(1.0);
+    await _setupSpeech();
+    _setupGemini();
+    if (mounted) setState(() {});
   }
 
   Future<void> _speak(String text) async {
-    if (text.trim().isEmpty) {
-      return;
-    }
-
+    if (text.trim().isEmpty) return;
     await _tts.stop();
     await _tts.speak(text);
   }
-
-  // =========================
-  // SPEECH TO TEXT
-  // =========================
 
   Future<void> _setupSpeech() async {
     try {
       _speechAvailable = await _speech.initialize(
         onStatus: (status) {
-          if (!mounted) {
-            return;
-          }
-
+          if (!mounted) return;
           if (status == 'listening') {
             setState(() {
               _isListening = true;
               _status = 'Listening...';
             });
-          } else if (status == 'notListening' ||
-              status == 'done') {
-            setState(() {
-              _isListening = false;
-            });
+          } else if (status == 'notListening' || status == 'done') {
+            setState(() => _isListening = false);
           }
         },
         onError: (error) {
-          if (!mounted) {
-            return;
-          }
-
+          if (!mounted) return;
           setState(() {
             _isListening = false;
             _status = 'Mic error';
           });
         },
       );
-    } catch (e) {
+    } catch (_) {
       _speechAvailable = false;
     }
   }
-
-  // =========================
-  // GEMINI
-  // =========================
 
   void _setupGemini() {
     if (_apiKey.trim().isEmpty) {
@@ -149,24 +113,13 @@ class _ThorfinHomeState extends State<ThorfinHome> {
     _model = GenerativeModel(
       model: 'gemini-2.5-flash',
       apiKey: _apiKey,
-      systemInstruction: Content.text(
-        '''
+      systemInstruction: Content.text('''
 You are THORFIN, Juwel's personal AI assistant.
 
-Personality:
-- Friendly
-- Practical
-- Clear
-- Helpful
-- Talk like a bhai
-- Understand Hinglish, Hindi and English
-- Keep normal answers concise unless more detail is needed
+Be friendly, practical, clear and concise. Talk like a bhai.
+Understand Hinglish, Hindi and English.
 
-IMPORTANT ACTION RULE:
-
-When the user wants to open an Android app, return ONLY one
-of these exact commands:
-
+When the user wants to open an Android app, return ONLY one exact command:
 ACTION:YOUTUBE
 ACTION:CHROME
 ACTION:CAMERA
@@ -174,57 +127,31 @@ ACTION:MAPS
 ACTION:SETTINGS
 
 Examples:
-
-User: YouTube kholo
-Assistant: ACTION:YOUTUBE
-
-User: Chrome open karo
-Assistant: ACTION:CHROME
-
-User: Camera kholo
-Assistant: ACTION:CAMERA
-
-User: Maps kholo
-Assistant: ACTION:MAPS
-
-User: Settings kholo
-Assistant: ACTION:SETTINGS
+YouTube kholo -> ACTION:YOUTUBE
+Chrome open karo -> ACTION:CHROME
+Camera kholo -> ACTION:CAMERA
+Maps kholo -> ACTION:MAPS
+Settings kholo -> ACTION:SETTINGS
 
 For normal questions, answer normally.
-
-Do not put ACTION commands inside markdown.
+Do not put ACTION commands in markdown.
 Do not add extra text to an ACTION response.
-''',
-      ),
+'''),
     );
 
     _chat = _model!.startChat();
   }
 
-  // =========================
-  // START LISTENING
-  // =========================
-
   Future<void> _startListening() async {
-    if (_isThinking) {
-      return;
-    }
+    if (_isThinking) return;
 
-    if (!_speechAvailable) {
-      await _setupSpeech();
-    }
+    if (!_speechAvailable) await _setupSpeech();
 
     if (!_speechAvailable) {
       if (mounted) {
-        setState(() {
-          _status = 'Speech recognition unavailable';
-        });
+        setState(() => _status = 'Speech recognition unavailable');
       }
-
-      await _speak(
-        'Speech recognition is not available.',
-      );
-
+      await _speak('Speech recognition is not available.');
       return;
     }
 
@@ -241,27 +168,15 @@ Do not add extra text to an ACTION response.
 
     await _speech.listen(
       onResult: (result) async {
-        if (!mounted) {
-          return;
-        }
+        if (!mounted) return;
 
-        setState(() {
-          _heardText = result.recognizedWords;
-        });
+        setState(() => _heardText = result.recognizedWords);
 
         if (result.finalResult &&
             result.recognizedWords.trim().isNotEmpty) {
           await _speech.stop();
-
-          if (mounted) {
-            setState(() {
-              _isListening = false;
-            });
-          }
-
-          await _processCommand(
-            result.recognizedWords.trim(),
-          );
+          if (mounted) setState(() => _isListening = false);
+          await _processCommand(result.recognizedWords.trim());
         }
       },
       listenFor: const Duration(seconds: 20),
@@ -272,14 +187,8 @@ Do not add extra text to an ACTION response.
     );
   }
 
-  // =========================
-  // COMMAND PROCESSING
-  // =========================
-
   Future<void> _processCommand(String text) async {
-    if (text.trim().isEmpty) {
-      return;
-    }
+    if (text.trim().isEmpty) return;
 
     if (mounted) {
       setState(() {
@@ -290,7 +199,6 @@ Do not add extra text to an ACTION response.
 
     final lower = text.toLowerCase();
 
-    // Direct commands first.
     if (_containsAny(lower, [
       'youtube kholo',
       'youtube open',
@@ -344,26 +252,11 @@ Do not add extra text to an ACTION response.
       return;
     }
 
-    // Everything else goes to Gemini.
     await _askGemini(text);
   }
 
-  bool _containsAny(
-    String text,
-    List<String> words,
-  ) {
-    for (final word in words) {
-      if (text.contains(word)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  // =========================
-  // GEMINI REQUEST
-  // =========================
+  bool _containsAny(String text, List<String> words) =>
+      words.any(text.contains);
 
   Future<void> _askGemini(String text) async {
     if (_chat == null) {
@@ -373,19 +266,12 @@ Do not add extra text to an ACTION response.
           _status = 'Gemini is not connected';
         });
       }
-
-      await _speak(
-        'Gemini is not connected.',
-      );
-
+      await _speak('Gemini is not connected.');
       return;
     }
 
     try {
-      final response = await _chat!.sendMessage(
-        Content.text(text),
-      );
-
+      final response = await _chat!.sendMessage(Content.text(text));
       final answer = response.text?.trim() ?? '';
 
       if (answer.isEmpty) {
@@ -395,11 +281,7 @@ Do not add extra text to an ACTION response.
             _status = 'No response';
           });
         }
-
-        await _speak(
-          'I could not get a response.',
-        );
-
+        await _speak('I could not get a response.');
         return;
       }
 
@@ -408,9 +290,7 @@ Do not add extra text to an ACTION response.
         return;
       }
 
-      if (!mounted) {
-        return;
-      }
+      if (!mounted) return;
 
       setState(() {
         _replyText = answer;
@@ -419,50 +299,35 @@ Do not add extra text to an ACTION response.
       });
 
       await _speak(answer);
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
+    } catch (_) {
+      if (!mounted) return;
 
       setState(() {
         _isThinking = false;
         _status = 'Gemini error';
       });
 
-      await _speak(
-        'Sorry bhai, Gemini is having a problem.',
-      );
+      await _speak('Sorry bhai, Gemini is having a problem.');
     }
   }
 
-  // =========================
-  // ACTION HANDLER
-  // =========================
-
   Future<void> _executeAction(String action) async {
-    final cleanAction = action.trim().toUpperCase();
-
-    switch (cleanAction) {
+    switch (action.trim().toUpperCase()) {
       case 'ACTION:YOUTUBE':
         await _openYouTube();
         break;
-
       case 'ACTION:CHROME':
         await _openChrome();
         break;
-
       case 'ACTION:CAMERA':
         await _openCamera();
         break;
-
       case 'ACTION:MAPS':
         await _openMaps();
         break;
-
       case 'ACTION:SETTINGS':
         await _openSettings();
         break;
-
       default:
         if (mounted) {
           setState(() {
@@ -470,218 +335,137 @@ Do not add extra text to an ACTION response.
             _isThinking = false;
           });
         }
-
-        await _speak(
-          'I do not know that action yet.',
-        );
-        break;
+        await _speak('I do not know that action yet.');
     }
   }
-
-  // =========================
-  // YOUTUBE
-  // =========================
 
   Future<void> _openYouTube() async {
     try {
-      final intent = AndroidIntent(
+      await AndroidIntent(
         action: 'action_view',
-        data: Uri.encodeFull(
-          'https://www.youtube.com',
-        ),
+        data: Uri.encodeFull('https://www.youtube.com'),
         package: 'com.google.android.youtube',
-      );
+      ).launch();
 
-      await intent.launch();
-
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _status = 'Opening YouTube...';
+          _isThinking = false;
+        });
       }
-
-      setState(() {
-        _status = 'Opening YouTube...';
-        _isThinking = false;
-      });
-    } catch (e) {
-      if (!mounted) {
-        return;
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _status = 'Could not open YouTube';
+          _isThinking = false;
+        });
       }
-
-      setState(() {
-        _status = 'Could not open YouTube';
-        _isThinking = false;
-      });
-
-      await _speak(
-        'YouTube could not be opened.',
-      );
+      await _speak('YouTube could not be opened.');
     }
   }
-
-  // =========================
-  // CHROME
-  // =========================
 
   Future<void> _openChrome() async {
     try {
-      final intent = AndroidIntent(
+      await AndroidIntent(
         action: 'action_view',
-        data: Uri.encodeFull(
-          'https://www.google.com',
-        ),
+        data: Uri.encodeFull('https://www.google.com'),
         package: 'com.android.chrome',
-      );
+      ).launch();
 
-      await intent.launch();
-
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _status = 'Opening Chrome...';
+          _isThinking = false;
+        });
       }
-
-      setState(() {
-        _status = 'Opening Chrome...';
-        _isThinking = false;
-      });
-    } catch (e) {
-      if (!mounted) {
-        return;
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _status = 'Could not open Chrome';
+          _isThinking = false;
+        });
       }
-
-      setState(() {
-        _status = 'Could not open Chrome';
-        _isThinking = false;
-      });
-
-      await _speak(
-        'Chrome could not be opened.',
-      );
+      await _speak('Chrome could not be opened.');
     }
   }
-
-  // =========================
-  // CAMERA
-  // =========================
 
   Future<void> _openCamera() async {
     try {
-      final intent = AndroidIntent(
+      await AndroidIntent(
         action: 'android.media.action.IMAGE_CAPTURE',
-      );
+      ).launch();
 
-      await intent.launch();
-
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _status = 'Opening Camera...';
+          _isThinking = false;
+        });
       }
-
-      setState(() {
-        _status = 'Opening Camera...';
-        _isThinking = false;
-      });
-    } catch (e) {
-      if (!mounted) {
-        return;
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _status = 'Could not open Camera';
+          _isThinking = false;
+        });
       }
-
-      setState(() {
-        _status = 'Could not open Camera';
-        _isThinking = false;
-      });
-
-      await _speak(
-        'Camera could not be opened.',
-      );
+      await _speak('Camera could not be opened.');
     }
   }
-
-  // =========================
-  // MAPS
-  // =========================
 
   Future<void> _openMaps() async {
     try {
-      final intent = AndroidIntent(
+      await AndroidIntent(
         action: 'action_view',
-        data: Uri.encodeFull(
-          'geo:0,0?q=Dhaka',
-        ),
+        data: Uri.encodeFull('geo:0,0?q=Dhaka'),
         package: 'com.google.android.apps.maps',
-      );
+      ).launch();
 
-      await intent.launch();
-
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _status = 'Opening Maps...';
+          _isThinking = false;
+        });
       }
-
-      setState(() {
-        _status = 'Opening Maps...';
-        _isThinking = false;
-      });
-    } catch (e) {
-      if (!mounted) {
-        return;
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _status = 'Could not open Maps';
+          _isThinking = false;
+        });
       }
-
-      setState(() {
-        _status = 'Could not open Maps';
-        _isThinking = false;
-      });
-
-      await _speak(
-        'Maps could not be opened.',
-      );
+      await _speak('Maps could not be opened.');
     }
   }
-
-  // =========================
-  // SETTINGS
-  // =========================
 
   Future<void> _openSettings() async {
     try {
-      final intent = AndroidIntent(
+      await AndroidIntent(
         action: 'android.settings.SETTINGS',
-      );
+      ).launch();
 
-      await intent.launch();
-
-      if (!mounted) {
-        return;
+      if (mounted) {
+        setState(() {
+          _status = 'Opening Settings...';
+          _isThinking = false;
+        });
       }
-
-      setState(() {
-        _status = 'Opening Settings...';
-        _isThinking = false;
-      });
-    } catch (e) {
-      if (!mounted) {
-        return;
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _status = 'Could not open Settings';
+          _isThinking = false;
+        });
       }
-
-      setState(() {
-        _status = 'Could not open Settings';
-        _isThinking = false;
-      });
-
-      await _speak(
-        'Settings could not be opened.',
-      );
+      await _speak('Settings could not be opened.');
     }
   }
 
-  // =========================
-  // UI
-  // =========================
-
   @override
   Widget build(BuildContext context) {
-    final bool geminiConnected =
-        _apiKey.trim().isNotEmpty;
+    final connected = _apiKey.trim().isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
         title: const Text(
           'THORFIN AI',
           style: TextStyle(
@@ -702,26 +486,20 @@ Do not add extra text to an ACTION response.
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                    CrossAxisAlignment.center,
                 children: [
-                  // Robot icon
                   Container(
                     width: 110,
                     height: 110,
                     decoration: BoxDecoration(
                       color: const Color(0xFF151B23),
-                      borderRadius:
-                          BorderRadius.circular(30),
+                      borderRadius: BorderRadius.circular(30),
                     ),
                     child: const Icon(
                       Icons.smart_toy_rounded,
                       size: 65,
                     ),
                   ),
-
                   const SizedBox(height: 24),
-
                   const Text(
                     'Hello Juwel',
                     textAlign: TextAlign.center,
@@ -730,84 +508,26 @@ Do not add extra text to an ACTION response.
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                   const SizedBox(height: 10),
-
                   Text(
-                    geminiConnected
-                        ? _status
-                        : 'Gemini is not connected',
+                    connected ? _status : 'Gemini is not connected',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 16,
-                      color: geminiConnected
+                      color: connected
                           ? Colors.white70
                           : Colors.redAccent,
                     ),
                   ),
-
                   const SizedBox(height: 20),
-
-                  // User speech
                   if (_heardText.isNotEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding:
-                          const EdgeInsets.all(14),
-                      margin:
-                          const EdgeInsets.only(
-                        bottom: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            const Color(0xFF151B23),
-                        borderRadius:
-                            BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        'You: $_heardText',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-
-                  // Thorfin reply
+                    _messageBox('You: $_heardText'),
                   if (_replyText.isNotEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding:
-                          const EdgeInsets.all(14),
-                      margin:
-                          const EdgeInsets.only(
-                        bottom: 20,
-                      ),
-                      decoration: BoxDecoration(
-                        color:
-                            const Color(0xFF151B23),
-                        borderRadius:
-                            BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        'THORFIN: $_replyText',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 15,
-                        ),
-                      ),
-                    ),
-
-                  // Mic button
+                    _messageBox('THORFIN: $_replyText'),
                   GestureDetector(
-                    onTap: _isThinking
-                        ? null
-                        : _startListening,
+                    onTap: _isThinking ? null : _startListening,
                     child: AnimatedContainer(
-                      duration:
-                          const Duration(
-                        milliseconds: 200,
-                      ),
+                      duration: const Duration(milliseconds: 200),
                       width: 88,
                       height: 88,
                       decoration: BoxDecoration(
@@ -817,14 +537,8 @@ Do not add extra text to an ACTION response.
                             : const Color(0xFF1E88E5),
                         boxShadow: [
                           BoxShadow(
-                            blurRadius:
-                                _isListening
-                                    ? 25
-                                    : 12,
-                            spreadRadius:
-                                _isListening
-                                    ? 4
-                                    : 1,
+                            blurRadius: _isListening ? 25 : 12,
+                            spreadRadius: _isListening ? 4 : 1,
                             color: _isListening
                                 ? Colors.redAccent
                                 : Colors.blueAccent,
@@ -832,16 +546,12 @@ Do not add extra text to an ACTION response.
                         ],
                       ),
                       child: Icon(
-                        _isListening
-                            ? Icons.mic
-                            : Icons.mic_none,
+                        _isListening ? Icons.mic : Icons.mic_none,
                         size: 42,
                       ),
                     ),
                   ),
-
                   const SizedBox(height: 16),
-
                   Text(
                     _isListening
                         ? 'Listening...'
@@ -854,17 +564,15 @@ Do not add extra text to an ACTION response.
                       color: Colors.white70,
                     ),
                   ),
-
                   const SizedBox(height: 12),
-
                   Text(
-                    geminiConnected
+                    connected
                         ? 'Gemini connected'
                         : 'Gemini API key missing',
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
-                      color: geminiConnected
+                      color: connected
                           ? Colors.greenAccent
                           : Colors.orangeAccent,
                     ),
@@ -878,14 +586,27 @@ Do not add extra text to an ACTION response.
     );
   }
 
-  // =========================
-  // CLEANUP
-  // =========================
+  Widget _messageBox(String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF151B23),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(fontSize: 15),
+      ),
+    );
+  }
 
   @override
   void dispose() {
     _speech.stop();
     _tts.stop();
-    super.dispose(
+    super.dispose();
   }
- }
+}
