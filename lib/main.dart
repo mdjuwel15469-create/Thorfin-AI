@@ -433,3 +433,5 @@ Ab kya karna hai:
 "android_intent_plus" Android-only plugin hai; current 6.1.0 ko Flutter ≥3.12, Dart ≥3.1, Java 17 aur newer Android Gradle tooling chahiye, so Codemagic ka Flutter stable setup is requirement ko meet karna chahiye.
 
 Ek limitation: abhi “Wapas aao” sirf reply karega; YouTube ke andar rehkar background me “Thorfin” sunna abhi implement nahi hua hai. Pehle ye command-launch version stable karte hain, phir background/always-listening Thorfin alag step me banayenge.
+  }
+}
