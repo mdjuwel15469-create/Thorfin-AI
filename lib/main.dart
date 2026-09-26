@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:android_intent_plus/android_intent.dart';
 
 void main() {
   runApp(const ThorfinApp());
@@ -38,7 +39,7 @@ class _ThorfinHomeState extends State<ThorfinHome> {
   bool _speechReady = false;
 
   String _text = '';
-  String _status = 'Tap the mic and speak';
+  String _status = 'THORFIN is ready';
 
   @override
   void initState() {
@@ -61,8 +62,6 @@ class _ThorfinHomeState extends State<ThorfinHome> {
 
           if (_isListening) {
             _status = 'Listening...';
-          } else if (status == 'done') {
-            _status = 'Processing...';
           }
         });
       },
@@ -81,9 +80,169 @@ class _ThorfinHomeState extends State<ThorfinHome> {
     }
   }
 
+  Future<void> _speak(String message) async {
+    await _tts.stop();
+    await _tts.speak(message);
+  }
+
+  Future<void> _openYouTube() async {
+    try {
+      await _speak('YouTube khol raha hoon');
+
+      final intent = AndroidIntent(
+        action: 'android.intent.action.MAIN',
+        package: 'com.google.android.youtube',
+        componentName: 'com.google.android.youtube.HomeActivity',
+      );
+
+      await intent.launch();
+    } catch (e) {
+      await _speak('YouTube open nahi ho paya');
+    }
+  }
+
+  Future<void> _openChrome() async {
+    try {
+      await _speak('Chrome khol raha hoon');
+
+      final intent = AndroidIntent(
+        action: 'android.intent.action.MAIN',
+        package: 'com.android.chrome',
+        componentName: 'com.google.android.apps.chrome.Main',
+      );
+
+      await intent.launch();
+    } catch (e) {
+      await _speak('Chrome open nahi ho paya');
+    }
+  }
+
+  Future<void> _openCamera() async {
+    try {
+      await _speak('Camera khol raha hoon');
+
+      final intent = AndroidIntent(
+        action: 'android.media.action.IMAGE_CAPTURE',
+      );
+
+      await intent.launch();
+    } catch (e) {
+      await _speak('Camera open nahi ho paya');
+    }
+  }
+
+  Future<void> _openMaps() async {
+    try {
+      await _speak('Maps khol raha hoon');
+
+      final intent = AndroidIntent(
+        action: 'android.intent.action.VIEW',
+        data: 'geo:0,0',
+      );
+
+      await intent.launch();
+    } catch (e) {
+      await _speak('Maps open nahi ho paya');
+    }
+  }
+
+  Future<void> _openSettings() async {
+    try {
+      await _speak('Settings khol raha hoon');
+
+      final intent = AndroidIntent(
+        action: 'android.settings.SETTINGS',
+      );
+
+      await intent.launch();
+    } catch (e) {
+      await _speak('Settings open nahi ho paya');
+    }
+  }
+
+  Future<void> _processCommand(String command) async {
+    final text = command.toLowerCase().trim();
+
+    if (text.isEmpty) {
+      await _speak('Kuch sunai nahi diya bhai');
+      return;
+    }
+
+    // YouTube
+    if (text.contains('youtube') ||
+        text.contains('you tube')) {
+      await _openYouTube();
+      return;
+    }
+
+    // Chrome
+    if (text.contains('chrome') ||
+        text.contains('google chrome')) {
+      await _openChrome();
+      return;
+    }
+
+    // Camera
+    if (text.contains('camera') ||
+        text.contains('cam')) {
+      await _openCamera();
+      return;
+    }
+
+    // Maps
+    if (text.contains('maps') ||
+        text.contains('map') ||
+        text.contains('google map')) {
+      await _openMaps();
+      return;
+    }
+
+    // Settings
+    if (text.contains('settings') ||
+        text.contains('setting')) {
+      await _openSettings();
+      return;
+    }
+
+    // Stop / Band
+    if (text == 'stop' ||
+        text.contains('band karo') ||
+        text.contains('band kar do') ||
+        text.contains('ruk jao')) {
+      await _speech.stop();
+
+      if (mounted) {
+        setState(() {
+          _isListening = false;
+          _status = 'Stopped';
+        });
+      }
+
+      await _speak('Theek hai bhai');
+      return;
+    }
+
+    // Wapas / Back
+    if (text.contains('wapas') ||
+        text.contains('back') ||
+        text.contains('piche') ||
+        text.contains('peeche')) {
+      await _speak('Theek hai bhai');
+      return;
+    }
+
+    // Unknown command
+    await _speak('Command samajh nahi aayi bhai');
+  }
+
   Future<void> _toggleListening() async {
     if (!_speechReady) {
       await _initVoice();
+    }
+
+    if (!_speechReady) {
+      await _speak('Speech recognition ready nahi hai');
+      return;
     }
 
     if (_isListening) {
@@ -114,17 +273,17 @@ class _ThorfinHomeState extends State<ThorfinHome> {
         });
 
         if (result.finalResult) {
+          final command = result.recognizedWords;
+
           setState(() {
             _isListening = false;
-            _status = 'You said:';
+            _status = 'Command received';
           });
 
-          if (_text.trim().isNotEmpty) {
-            await _tts.speak('I heard you say $_text');
-          }
+          await _processCommand(command);
         }
       },
-      listenFor: const Duration(seconds: 20),
+      listenFor: const Duration(seconds: 15),
       pauseFor: const Duration(seconds: 3),
       partialResults: true,
     );
@@ -163,7 +322,9 @@ class _ThorfinHomeState extends State<ThorfinHome> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: _isListening ? Colors.white : Colors.white24,
+                  color: _isListening
+                      ? Colors.white
+                      : Colors.white24,
                   width: 2,
                 ),
               ),
@@ -219,10 +380,14 @@ class _ThorfinHomeState extends State<ThorfinHome> {
                 height: 85,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _isListening ? Colors.red : Colors.white,
+                  color: _isListening
+                      ? Colors.red
+                      : Colors.white,
                 ),
                 child: Icon(
-                  _isListening ? Icons.stop_rounded : Icons.mic_rounded,
+                  _isListening
+                      ? Icons.stop_rounded
+                      : Icons.mic_rounded,
                   size: 40,
                   color: Colors.black,
                 ),
@@ -232,7 +397,9 @@ class _ThorfinHomeState extends State<ThorfinHome> {
             const SizedBox(height: 18),
 
             Text(
-              _isListening ? 'Tap to stop' : 'Tap to speak',
+              _isListening
+                  ? 'Tap to stop'
+                  : 'Tap to speak',
               style: const TextStyle(
                 color: Colors.white54,
                 fontSize: 14,
@@ -246,3 +413,23 @@ class _ThorfinHomeState extends State<ThorfinHome> {
     );
   }
 }
+
+Ab kya karna hai:
+
+1. GitHub → "lib/main.dart"
+2. Purana poora code delete
+3. Upar wala code paste
+4. Commit changes
+5. Codemagic → new build
+6. APK install karke mic permission Allow karna
+7. Test:
+   - "YouTube kholo"
+   - "Chrome kholo"
+   - "Camera kholo"
+   - "Maps kholo"
+   - "Settings kholo"
+   - "Band karo"
+
+"android_intent_plus" Android-only plugin hai; current 6.1.0 ko Flutter ≥3.12, Dart ≥3.1, Java 17 aur newer Android Gradle tooling chahiye, so Codemagic ka Flutter stable setup is requirement ko meet karna chahiye.
+
+Ek limitation: abhi “Wapas aao” sirf reply karega; YouTube ke andar rehkar background me “Thorfin” sunna abhi implement nahi hua hai. Pehle ye command-launch version stable karte hain, phir background/always-listening Thorfin alag step me banayenge.
