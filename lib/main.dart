@@ -299,15 +299,19 @@ Do not add extra text to an ACTION response.
       });
 
       await _speak(answer);
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
 
+      final errorText = e.toString();
       setState(() {
         _isThinking = false;
         _status = 'Gemini error';
+        _replyText = errorText.length > 1200
+            ? errorText.substring(0, 1200)
+            : errorText;
       });
 
-      await _speak('Sorry bhai, Gemini is having a problem.');
+      await _speak('Gemini error. Check the message on screen.');
     }
   }
 
