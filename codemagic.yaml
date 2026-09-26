@@ -49,12 +49,8 @@ workflows:
               )
 
           manifest.write_text(text)
-          print("Android voice permissions configured.")
+          print("Android permissions configured.")
           PY
-
-      - name: Set up Flutter local properties
-        script: |
-          echo "flutter.sdk=$HOME/programs/flutter" > "$CM_BUILD_DIR/android/local.properties"
 
       - name: Get Flutter packages
         script: |
@@ -62,7 +58,8 @@ workflows:
 
       - name: Build THORFIN APK
         script: |
-          flutter build apk --debug
+          flutter build apk --debug \
+            --dart-define=GEMINI_API_KEY=$GEMINI_API_KEY
 
     artifacts:
       - build/app/outputs/flutter-apk/*.apk
