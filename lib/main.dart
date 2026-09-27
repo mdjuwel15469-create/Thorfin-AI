@@ -62,7 +62,7 @@ class _ThorfinHomeState extends State<ThorfinHome> {
 
   Future<void> _setup() async {
     await _tts.setLanguage('en-US');
-    await _tts.setSpeechRate(0.9);
+    await _tts.setSpeechRate(0.7);
     await _tts.setVolume(1.0);
     await _tts.setPitch(1.0);
     await _setupSpeech();
